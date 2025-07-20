@@ -3,8 +3,8 @@ name: Blue-Green Deploy
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Select deployment environment'
+      target:
+        description: 'Select deployment target (node group)'
         required: true
         default: 'blue'
         type: choice
@@ -36,22 +36,19 @@ jobs:
         run: |
           aws eks update-kubeconfig --region us-east-1 --name Blue-Green
 
-      - name: Deploy Green
-        if: ${{ github.event.inputs.environment == 'green' }}
+      - name: Deploy to Green Node Group
+        if: ${{ github.event.inputs.target == 'green' }}
         run: |
           kubectl apply -f k8s/deployment-green.yaml
           kubectl apply -f k8s/green-service.yaml
 
-      - name: Deploy Blue
-        if: ${{ github.event.inputs.environment == 'blue' }}
+      - name: Deploy to Blue Node Group
+        if: ${{ github.event.inputs.target == 'blue' }}
         run: |
           kubectl apply -f k8s/deployment-blue.yaml
           kubectl apply -f k8s/service.yaml
 
-      # Optional: Switch traffic to green
-      # - name: Switch Service to Green
-      #   if: ${{ github.event.inputs.environment == 'green' }}
+      # Optional: Switch service traffic to the new node group (by version label)
+      # - name: Switch Service Selector
       #   run: |
-      #     kubectl patch service demo-service -n default -p '{"spec":{"selector":{"app":"demo","version":"green"}}}'
-
-      # Optional: Rollback logic could go here
+      #     kubectl patch service demo-service -n default -p '{"spec":{"selector":{"app":"demo","version":"${{ github.event.inputs.target }}"}}}'
